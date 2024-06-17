@@ -499,6 +499,7 @@ decomposition <- function(
 #' @details
 #' This function computes p-values for s, mcb, and dsc components based on the specified theory.
 #' It also calculates the original DM p-value for the s component.
+#' @export
 
 get_pval <- function(
     dt,   # must be asy_vars object
