@@ -1,0 +1,28 @@
+Package: SDI
+Type: Package
+Title: Score Decomposition Inference
+Version: 0.0.1
+Author: c(
+    person(given = "Marius",
+           family = "Puke",
+           role = c("aut", "cre"),
+           email = "marius.puke@uni-hohenheim.de")
+           )
+Maintainer: Marius Puke <marius.puke@uni-hohenheim.de>
+Description: Package to perfroms inference for the Murphy Decompostion of a forecaster's average score/loss. 
+License: GPL-3
+Encoding: UTF-8
+LazyData: false
+RoxygenNote: 7.2.1
+Depends:
+     R (>= 3.3)
+Imports: 
+    magrittr, 
+    stats, 
+    tibble, 
+    sandwich, 
+    CompQuadForm, 
+    MASS, 
+    lmtest, 
+    car
+    

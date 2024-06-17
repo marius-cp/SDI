@@ -1,0 +1,573 @@
+#' @importFrom magrittr "%>%"
+#' @importFrom tibble tibble
+#' @importFrom sandwich NeweyWest vcovHAC
+NULL
+
+#' Calculate variance of the decomposition components for two (rival) forecasts based on Mincer-Zarnowitz regressions.
+#'
+#' This function computes variance of the score decomposition for two rival forecasts X_1 and X_2
+#' based on the provided data. It calculates components related to the score (s), miscalibration (mcb), and discrimination (dsc).
+#'
+#' @param X_1 Numeric vector  for the first forecast.
+#' @param X_2 Numeric vector for the second forecast.
+#' @param Y Numeric vector for the outcome variable.
+#' @param S Function, the scoring function used to assess the forecasts.
+#' @param V Function, the identification function, where V is the derivative of S.
+#' @param Spp Function, second derivative of the scoring function, default is NA.
+#'
+#' @return A list containing several components:
+#'   - `asy_vars`: a data frame with the variances of s, mcb, and dsc for both forecasts.
+#'   - `pvals`: p-values for testing the significance of differences.
+#'   - `Lambda`: matrix used in the variance calculations.
+#'   - `Omega`: covariance matrix based on the scoring function.
+#'   - `eta`: transformation matrix used in variance calculations.
+#'   - `Gamma`: product of eta and Lambda matrices.
+#'   - `dec_1`: decomposition results for the first forecast.
+#'   - `dec_2`: decomposition results for the second forecast.
+#'
+#'
+#' @importFrom magrittr `%>%`
+#'
+#' @examples
+#' # Define a simple scoring function
+#' S <- function(y, x) { (y - x)^2 }
+#' # Define its derivative
+#' V <- function(x, y) { 2 * (y - x) }
+#' Spp = function(x, y) 2
+#' # Generate sample data
+#' Y <- rnorm(100)
+#' X_1 <- Y + rnorm(100, sd = 0.5)
+#' X_2 <- Y + rnorm(100, sd = 0.5)
+#' # Calculate asymmetric variance
+#' results <- asy_var_dm(X_1, X_2, Y, S, V, Spp)
+#' print(results)
+#'
+#' @export
+
+
+asy_var_dm <- function(
+    X_1,
+    X_2,
+    Y,
+    S,
+    V ,
+    Spp
+){
+
+  tt <- length(Y)
+
+  # fcast 1
+  MZdec1 <- MZdec(
+    x=X_1,
+    y=Y,
+    S=S
+  )
+  mz_1 <- MZdec1$x_rc
+  dec_1 <- MZdec1$dec
+  s_1 <- dec_1$s
+  mcb_1 <- dec_1$mcb
+  dsc_1 <- dec_1$dsc
+  unc_1 <- dec_1$unc
+
+  # fcast 2
+  MZdec2 <- MZdec(
+    x=X_2,
+    y=Y,
+    S=S
+  )
+  mz_2 <- MZdec2$x_rc
+  dec_2 <- MZdec2$dec
+  s_2 <- dec_2$s
+  mcb_2 <- dec_2$mcb
+  dsc_2 <- dec_2$dsc
+  unc_2 <- dec_2$unc
+
+  s_dif <- s_1-s_2
+  mcb_dif <- mcb_1-mcb_2
+  dsc_dif <- dsc_1-dsc_2
+
+  # g(\hat\theta_{1,T}) first and second component (g1_1,g2_1)
+  #g1_1 <- as.numeric(LLN_B(X=X_1,Y=Y)[1]) # --> to be made flexible with SPP!!!
+  #g2_1 <- as.numeric(LLN_B(X=X_1,Y=Y)[2]) # --> to be made flexible with SPP!!!
+
+  # g(\hat\theta_{2,T}) first and second component (g1_2,g2_2)
+  #g1_2 <- as.numeric(LLN_B(X=X_2,Y=Y)[1]) # --> to be made flexible with SPP!!!
+  #g2_2 <- as.numeric(LLN_B(X=X_2,Y=Y)[2]) # --> to be made flexible with SPP!!!
+
+  # g(r) which is independent of forecast
+  # u <-  as.numeric(LLN_E(Y=Y)) # --> to be made flexible with SPP!!!
+
+  u=g1_1=g1_2=g2_1=g2_2=0
+
+  Lambda <- matrix(
+    c(
+      1, 0, 0, 0,         0, 0, 0, 0,           0, 0,
+      0, 1, 0, 0,         0, 0, 0, 0,           0, 0,
+      0, 0, g1_1, g1_2,   0, 0, 0, 0,           0, 0,
+      0, 0, 0, 0,         1, 0, 0, 0,           0, 0,
+      0, 0, 0, 0,         0, 1, 0, 0,           0, 0,
+      0, 0, 0, 0,         0, 0, g2_1, g2_2,     0, 0,
+      0, 0, 0, 0,         0, 0, 0, 0,           1, 0,
+      0, 0, 0, 0,         0, 0, 0, 0,           0, u
+    ),
+    byrow = T,
+    nrow = 8,
+    ncol = 2*(2+2)+2
+  )
+  eta <- matrix(
+    c(
+      1,-1,1,    0,0,0,   0,0,
+      0,-1,1,    0,0,0,   -1,1,
+      0,0,0,     1,-1,1,  0,0,
+      0,0,0,     0,-1,1,  -1,1
+    ),
+    byrow = T,
+    nrow = 4,
+    ncol = 8
+  )
+
+  Gamma <- eta%*%Lambda[,c(-3,-4,-7,-8,-10)]
+
+  marg <- function(z) mean(z)
+
+  temp_Omega <-
+    as.matrix(data.frame(
+      a_1 = S(y = Y, x = X_1) ,
+      c_1 = S(y = Y, x = (mz_1)) ,
+      #v1_1 = V(x = (mz_1), y = Y) ,
+      #v2_1 = V(x = (mz_1), y = Y) * X_1,
+      a_2 = S(y = Y, x = X_2) ,
+      c_2 = S(y = Y, x = (mz_2)) ,
+      #v1_2 = V(x = (mz_2), y = Y) ,
+      #v2_2 = V(x = (mz_2), y = Y) * X_2,
+      e = S(x = marg(Y), y = Y)
+      #u = V(x = marg(Y), y = Y)
+    ))
+
+  # cor(temp_Omega)
+  # cor(mz_1,X_1)
+  # cor(V(x = (mz_1), y = Y) , V(x = (mz_1), y = Y) * X_1)
+  # cor(S(y = Y, x = X_1), S(y = Y, x = (mz_1)))
+
+  Omega <-  1 * sandwich::NeweyWest(
+    lm(temp_Omega ~ 1)
+  )
+  eigen(Omega)$values
+
+  Omega <-
+    1 * sandwich::vcovHAC(
+      lm(temp_Omega ~ 1)
+    )
+
+  eigen(Omega)$values
+
+  omega1 <- t(c(1,-1,-1,1) )# for classical DM test
+  omega2 <- t(c(1,0,-1,0)) # for MCB test
+  omega3 <- t(c(0,1,0,-1)) # for DSC test
+
+
+
+  # asym var score diff (equivalent to variance in the DM test)
+  s_var <- omega1%*%Gamma%*%Omega%*%t(Gamma)%*%t(omega1)
+  s_var
+
+  # asym var mcb diff
+  mcb_var <- omega2%*%Gamma%*%Omega%*%t(Gamma)%*%t(omega2)
+  mcb_var
+
+  # asym var dsc diff
+  dsc_var <- omega3%*%Gamma%*%Omega%*%t(Gamma)%*%t(omega3)
+  dsc_var
+
+  tab <-
+    data.frame(
+      s_1, s_2,  s_var,
+      mcb_1, mcb_2, mcb_var,
+      dsc_1, dsc_2, dsc_var,
+      unc_1, unc_2
+    )
+
+  pvals <- get_pval(dt=tab,tt=tt)
+
+  out <-
+    list(
+      asy_vars=tab,
+      pvals = pvals,
+      Lambda = Lambda,
+      eta = eta,
+      Gamma=Gamma,
+      Omega = Omega,
+      dec_1=dec_1,
+      dec_2=dec_2
+    )
+
+  return(out)
+
+
+}
+
+
+
+#' Test for Miscalibration (MCB=0)
+#'
+#' This function implements tests for the null hypothesis of mis-calibration (MCB=0)
+#' using forecast (X) and realization (Y) data. It employs two methods for testing:
+#' a generalized Chi-square test of the loss function decomposition,
+#' and the classical Mincer-Zarnowitz test. Both tests are valid under remark 3.1.
+#'
+#' @param X A numeric vector representing the forecast values.
+#' @param Y A numeric vector representing the actual realization values.
+#' @param S scoring function
+#' @param V identification function, first derivative of score V:= S'
+#' @param Spp  second derviative of score S''
+#' @return A tibble containing the results of the mis-calibration tests, including
+#'         the MCB value, MCB variance, MCB p-value, Mincer-Zarnowitz p-value,
+#'         and F-test p-value.
+#'
+#' @details The function first regresses Y on X to extract fitted values and residuals,
+#'          then calculates the variance-covariance matrix using the Newey-West estimator.
+#'          It proceeds to compute the MCB value, its variance, and p-value using the
+#'          generalized Chi-square asymptotics. The Mincer-Zarnowitz test is conducted
+#'          as a comparative methodology. The F-test p-value is also computed for
+#'          assessing the joint hypothesis that the intercept is zero and the slope is one
+#'          in the linear regression of Y on X.
+#'
+#'          Note: The function requires the `sandwich`, `MASS`, `car`, and `CompQuadForm`
+#'          packages for various calculations.
+#'
+#' @examples
+#' # Example usage:
+#' S <- function(x, y) (x - y)^2
+#' V <- function(x, y) 2*(x - y)
+#' Spp <- function(x, y) 2
+#' X <- rnorm(100)
+#' Y <- X + rnorm(100)
+#' test_results <- mcb_null_test(X, Y, S, V, Spp)
+#' print(test_results)
+#'
+#' @export
+
+mcb_null_test <-
+  function(
+    X, #forecast
+    Y, # realization,
+    S,
+    V ,# identification function, V:= S'
+    Spp # S''
+  ){
+
+    if(!is.function(S)) {stop("Please provide a function for scoreing function 'S'.")}
+    if(!is.function(V)) {stop("Please provide a function for identification function 'V'.")}
+    if(!is.function(Spp)) {stop("Please provide a function for S''.")}
+
+    tt <- length(X)
+
+    # todo: flexible MZ reg functions!
+    MZreg <- lm(Y~X)
+    dec <- decomposition(
+      x=X,
+      x_rc=stats::fitted(MZreg),
+      y=Y,
+      S=S
+    )#, S=scoring_fun)
+
+    W <- t(t(stats::model.matrix(MZreg)))
+
+    Sigma <-tt*sandwich::vcovHAC(
+      lm(as.vector(V(stats::fitted(MZreg),y=Y))*W ~1)
+    )
+    Sigma
+
+
+    Omega<- matrix(0, nrow=2,ncol=2)
+    for (i in 1:nrow(W)) {
+      temp <- Spp(X[i],Y[i])*(W[i,])%*%t(W[i,])
+      Omega <- Omega+temp
+    }
+    Omega <- Omega/tt
+
+    N <- t(t(MASS::mvrnorm(n=1,mu=c(0,0),Sigma=Sigma)))
+
+    freg <- lm((Y-X) ~ X)
+    fsum <- summary(freg)
+
+    F_pval <-
+      car::linearHypothesis(
+        freg,
+        c("(Intercept)=0","X=0")
+        #.vcov = sandwich::NeweyWest(reg, lag = 3)
+      ) $`Pr(>F)`[2]
+
+    sol <-
+      tibble::tibble(
+        mcb = dec$mcb,
+        mcb_var =  as.numeric(t(N)%*%solve(Omega)%*%N),
+        mcb_pval = CompQuadForm::imhof(
+          2*tt*dec$mcb,
+          lambda = eigen(solve(Omega)%*%Sigma)$values
+        )$Qq %>% round(4),
+        mz_pval = MZ.test.mean(haty = X, y=Y)$Wald.pval,
+        F_pval = F_pval#pf(fsum$fstatistic[1], 1, tt-2, lower.tail = FALSE)
+      )
+    return(sol)
+  }
+
+
+
+#' Flexible MZ Mean Regression Using Different Scoring Functions
+#'
+#' This function fits a mean MZ regression using different loss functions S(x, y), e.g., for the squared error S(x, y) = (x - y)^2,
+#' where the forecast is x and the realization is y. All scoring functions must be Bregman scores.
+#' It returns the decomposition of the average score and the coefficients of the MZ regression under the given scoring function.
+#'
+#' @param x Numeric vector: Forecasts to be evaluated.
+#' @param y Numeric vector: Realized values (must have the same length as x).
+#' @param S function: Scoring function, which must be a function S(x, y).
+#'
+#' @return A list containing the following components:
+#'   \item{x_rc}{Numeric vector: MZ recalibrated mean forecasts under the given scoring function.}
+#'   \item{coef}{Numeric vector: Coefficients of the MZ regression under the given scoring function.}
+#'   \item{dec}{tibble: Decomposition of the average score.}
+#'
+#' @details
+#' The function uses optimization techniques to estimate the parameters of the mean forecast model based on the specified loss function.
+#' Users should ensure that the scoring function adheres to the properties of Bregman scores.
+#'
+#' @examples
+#' x <- c(1, 2, 3, 4, 5)
+#' y <- c(1.1, 2.2, 3.2, 4.1, 5.3)
+#' result <- MZdec(
+#'   x = x,
+#'   y = y,
+#'   S = function(x, y) (x - y)^2
+#' )
+#'
+#' @seealso
+#' \code{\link{optim}}, \code{\link{lm}}
+#'
+#' @keywords mean forecast loss function optimization
+#' @export
+#' @importFrom  magrittr `%>%`
+#'
+MZdec <- function(x, y, S) {
+  # loss for optim function
+  loss <- function(params, x, y, S) {
+    beta0 <- params[1]
+    beta1 <- params[2]
+    haty <- beta0 + beta1 * x
+    error <- S(x=haty,y=y)
+    return(sum(error))
+  }
+
+  # Initial guess for parameters
+  initial_params <- c(0, 1)
+  # Define lower bounds for parameters (beta0 >= 0)
+  lower_bounds <- c(-Inf, -Inf)
+
+  if((identical(body(S), body(function(x, y) (x - y)^2)))){
+    mzreg <- stats::lm(y ~ x)
+    x_rc <- stats::fitted(mzreg)
+    coef <- as.vector(stats::coefficients(mzreg))
+
+    # Minimize squared error using optim function
+    result <- stats::optim(par = initial_params, fn = loss, x = x, y = y, S=S)
+
+    # Optimal parameters
+    mse_optimal_beta0 <- result$par[1]
+    mse_optimal_beta1 <- result$par[2]
+
+    # print warning if closed form (OLS) and optin deviate
+    if(
+      !isTRUE(
+        all.equal(
+          round(c(mse_optimal_beta0,mse_optimal_beta1),3),
+          round(as.vector(stats::coefficients(mzreg)),3)
+        )
+      )
+    ){
+      print(
+        paste(
+          "optim() and lm() return different coefficients:",
+          round(mse_optimal_beta0, 3), ",", round(mse_optimal_beta1, 3),
+          "vs",
+          round(stats::coefficients(mzreg)[1], 3),",",round(stats::coefficients(mzreg)[2], 3)
+        )
+      )
+      #print(c("optim() and lm() return different coefficent"), round(c(mse_optimal_beta0,mse_optimal_beta1),3), "and", round(as.vector(coefficients(mzreg)),3))
+    }
+
+  } else {
+    result <- stats::optim(par = initial_params, fn = loss, x = x, y = y, S=S)
+    # Optimal parameters
+    optimal_beta0 <- result$par[1]
+    optimal_beta1 <- result$par[2]
+
+    # fitted values
+    x_rc <- optimal_beta0 + optimal_beta1*x
+
+    # coefficients
+    coef <- c(optimal_beta0, optimal_beta1)
+  }
+
+  # only important for volatility !
+  # qlike will not work in this case !
+  if(any(x_rc<0)){print("!!! Reklaibration returns negative value !!! ")}
+
+  dec <- decomposition(x=x, y=y, x_rc=x_rc, S=S)
+
+  return(list(x_rc=x_rc,coef=coef, dec = dec))
+
+}
+
+
+
+#' Decomposition of the Scoring Function
+#'
+#' This function performs a decomposition of the scoring function given forecasts,
+#' recalibrated forecasts, and actual outcomes. It allows for flexible use of any scoring function `S`
+#' provided by the user, to calculate the mean score, marginal contribution bias (MCB),
+#' and the decomposition of the scoring contribution (DSC).
+#'
+#' @param x Numeric vector of forecast values.
+#' @param x_rc Numeric vector of recalibrated forecast values.
+#' @param y Numeric vector of actual outcome values.
+#' @param S Function, a user-defined scoring function that takes two arguments (forecast, outcome)
+#'   and returns a numeric value indicating the score.
+#'
+#' @return A tibble with columns:
+#'   - `s`: the mean score using the original forecast.
+#'   - `mcb`: marginal contribution bias, calculated as the difference between the mean scores of
+#'     the original and recalibrated forecasts.
+#'   - `dsc`: decomposition scoring contribution, calculated as the difference between the mean
+#'     score of the mean outcome and the recalibrated forecast.
+#'   - `unc`: unconditional mean score using the mean of the outcomes.
+#'
+#' @examples
+#' # Define a simple scoring function
+#' S <- function(x, y) { (y - x)^2 }
+#' # Generate sample data
+#' y <- rnorm(100)
+#' x <- y + rnorm(100, sd = 0.5)
+#' x_rc <- y + rnorm(100, sd = 0.2)
+#' # Decompose the scoring
+#' decomposition_results <- decomposition(x, x_rc, y, S)
+#' print(decomposition_results)
+#'
+#' @export
+
+decomposition <- function(
+    x,
+    x_rc,
+    y,
+    S
+) {
+  # inputs:
+  #x forecast
+  #x_rc recalibrated forecast
+  #y realization
+  # output: score and score decomposition
+
+  s <- mean(S(x, y))
+  #res <- y-x
+  #c_rc_ucond <- optim(par = 0, fn = function(c) score(x + c, y),method = "Brent", lower = min(res), upper = max(res))$par
+  #s_rc_ucond <- score(x + c_rc_ucond, y);s_rc_ucond
+  s_rc <- mean(S(x_rc, y))
+  s_rc
+  s_mg <- mean(S(mean(y), y))
+  s_mg
+  mcb <- s - s_rc
+  #umcb <- s - s_rc_ucond
+  #cmcb <- s_rc_ucond - s_rc
+  dsc <- s_mg - s_rc
+  dsc
+  unc <- s_mg
+  #(mcb-dsc+unc == s)
+  return(tibble::tibble(s, mcb, dsc, unc))
+}
+
+
+#' Calculate p-values based on specified theory.
+#'
+#' This function calculates p-values based on the provided theory for different components.
+#' It takes an asy_vars object containing relevant variables and the number of observations.
+#'
+#' @param dt An asy_vars object from function .
+#' @param tt Number of observations.
+#'
+#' @return A data frame containing p-values for different components: s_pval, s_pvalDM, mcb_pval, and dsc_pval.
+#'
+#' @details
+#' This function computes p-values for s, mcb, and dsc components based on the specified theory.
+#' It also calculates the original DM p-value for the s component.
+
+get_pval <- function(
+    dt,   # must be asy_vars object
+    tt # number ov obs
+){
+  # pvals based on our theory
+  s_stat <- (dt$s_1 - dt$s_2) / sqrt(dt$s_var)
+  s_pval <- 2 * stats::pt(-abs(s_stat), df = tt - 1)
+
+  mcb_stat <- (dt$mcb_1 - dt$mcb_2) / sqrt(dt$mcb_var)
+  mcb_pval <- 2 * stats::pt(-abs(mcb_stat), df = tt - 1)
+
+  dsc_stat <- (dt$dsc_1 - dt$dsc_2) / sqrt(dt$dsc_var)
+  dsc_pval <- 2 * stats::pt(-abs(dsc_stat), df = tt - 1)
+
+  # original DM p-value
+  #s_dm_orig_stat <- (dt$s_1 - dt$s_2) / sqrt(dt$s_varDM)
+  #s_pvalDM <- 2 * pt(-abs(s_dm_orig_stat), df = tt - 1)
+
+  out <-
+    data.frame(
+      s_pval, #s_pvalDM,
+      mcb_pval, dsc_pval
+    )
+
+  return(out)
+}
+
+
+#' Mincer-Zarnowitz Mean Test
+#'
+#' This function performs the classical Mincer-Zarnowitz test to evaluate the accuracy of economic forecasts.
+#'
+#' @param haty Numeric vector of forecasted values.
+#' @param y Numeric vector of actual values.
+#'
+#' @return A list containing several components:
+#'   - `estimate`: Estimated coefficients from the Mincer-Zarnowitz regression.
+#'   - `CI`: Confidence intervals for the estimated coefficients.
+#'   - `WaldStat`: Wald statistic for testing the joint hypothesis that the intercept is zero and the slope is one.
+#'   - `Wald.pval`: p-value associated with the Wald statistic.
+#'   - `fittedvalues`: A tibble with the forecasted values and the corresponding fitted values from the regression.
+#'
+#' @references Mincer, J. and Zarnowitz, V. (1969). The evaluation of economic forecasts. In Economic Forecasts and Expectations: Analysis of Forecasting Behavior and Performance, pages 3–46. National Bureau of Economic Research, Inc.
+#'
+#' @importFrom magrittr `%>%`
+#' @importFrom tibble tibble
+#' @importFrom lmtest coefci
+#' @importFrom sandwich NeweyWest vcovHAC
+#' @importFrom stats lm coef pchisq
+#'
+#' @examples
+#' # Generate sample data
+#' y <- rnorm(100)
+#' haty <- y + rnorm(100, sd = 0.5)
+#' # Perform Mincer-Zarnowitz test
+#' results <- MZ.test.mean(haty, y)
+#' print(results)
+#'
+#' @export
+MZ.test.mean <- function(haty, y){
+  MZ.fit <- stats::lm(y~haty)
+  coefci <- lmtest::coefci(MZ.fit, vcov. = sandwich::vcovHAC) %>% round(3)
+  # below solve() returns the inverse of the covar matrix
+  W <- t(stats::coef(MZ.fit) - c(0,1)) %*% solve(sandwich::vcovHAC(MZ.fit)) %*% (stats::coef(MZ.fit) - c(0,1))
+  pval <- 1 - stats::pchisq(W,2) %>% round(3)
+  return(list(estimate=stats::coef(MZ.fit),
+              CI=coefci,
+              WaldStat=as.numeric(W),
+              Wald.pval=as.numeric(pval),
+              fittedvalues = tibble::tibble("x"=haty ,"fit" = MZ.fit$fitted.values)))
+}
