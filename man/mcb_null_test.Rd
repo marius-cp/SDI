@@ -45,6 +45,7 @@ The function first regresses Y on X to extract fitted values and residuals,
 S <- function(x, y) (x - y)^2
 V <- function(x, y) 2*(x - y)
 Spp <- function(x, y) 2
+set.seed(1234)
 X <- rnorm(100)
 Y <- X + rnorm(100)
 test_results <- mcb_null_test(X, Y, S, V, Spp)

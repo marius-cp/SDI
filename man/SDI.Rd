@@ -35,9 +35,9 @@ A list of class "SDI" containing several components:
   - `mcbnulltest_X1`: results of the miscalibration null test for the first forecast.
   - `mcbnulltest_X2`: results of the miscalibration null test for the second forecast.
   - `mcbIUUI`: combined p-values for the miscalibration tests.
-  - `dscnulltestX1`: placeholder for discrimination null test for the first forecast (currently NA).
-  - `dscnulltestX2`: placeholder for discrimination null test for the second forecast (currently NA).
-  - `dscIUUI`: placeholder for combined p-values for the discrimination tests (currently NA).
+  - `dscnulltestX1`: placeholder for discrimination null test for the first forecast.
+  - `dscnulltestX2`: placeholder for discrimination null test for the second forecast.
+  - `dscIUUI`: placeholder for combined p-values for the discrimination test.
   - `mySDIvar`: the selected variance of the SDI.
   - `dm`: a data frame with the Diebold-Mariano test results including `dm_asy_var`, `dm_stat`, and `dm_pval`.
 }
