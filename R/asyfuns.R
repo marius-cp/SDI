@@ -149,10 +149,11 @@ asy_var_dm <- function(
   # cor(V(x = (mz_1), y = Y) , V(x = (mz_1), y = Y) * X_1)
   # cor(S(y = Y, x = X_1), S(y = Y, x = (mz_1)))
 
-  Omega <-  1 * sandwich::NeweyWest(
-    lm(temp_Omega ~ 1)
-  )
-  eigen(Omega)$values
+  # makes some problems for the DSC=0 simulations
+  # Omega <-  1 * sandwich::NeweyWest(
+  #   lm(temp_Omega ~ 1)
+  # )
+  # eigen(Omega)$values
 
   Omega <-
     1 * sandwich::vcovHAC(
