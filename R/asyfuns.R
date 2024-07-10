@@ -240,6 +240,7 @@ asy_var_dm <- function(
 #' S <- function(x, y) (x - y)^2
 #' V <- function(x, y) 2*(x - y)
 #' Spp <- function(x, y) 2
+#' set.seed(1234)
 #' X <- rnorm(100)
 #' Y <- X + rnorm(100)
 #' test_results <- mcb_null_test(X, Y, S, V, Spp)
@@ -311,6 +312,140 @@ mcb_null_test <-
       )
     return(sol)
   }
+
+
+#' Test for zero discrimination (DSC=0)
+#'
+#' This function implements tests for the null hypothesis of DSC=0, using
+#' forecast (X) and realization (Y) data. It employs the generalized Chi-square
+#' test of the score decomposition. Also the Wald and F test pendants are
+#' reported.
+#' @param X A numeric vector representing the forecast values.
+#' @param Y A numeric vector representing the actual realization values.
+#' @param S Scoring function.
+#' @param V Identification function, first derivative of the score (V := S').
+#' @param Spp Second derivative of the score (S'').
+#' @return A tibble containing the results of the dynamic stochastic calibration tests, including
+#'         the DSC value, DSC variance, DSC p-value, Mincer-Zarnowitz p-value, and Wald test p-value.
+#'
+#' @details The function first regresses Y on X to extract fitted values and residuals,
+#'          then calculates the variance-covariance matrix using the HAC estimator.
+#'          It proceeds to compute the DSC value, its variance, and p-value using the
+#'          generalized Chi-square asymptotics.
+#'
+#'          Note: The function requires the `sandwich`, `MASS`, `car`, and `CompQuadForm`
+#'          packages for various calculations.
+#'
+#' @examples
+#' # Example usage:
+#' S <- function(x, y) (x - y)^2
+#' V <- function(x, y) 2*(x - y)
+#' Spp <- function(x, y) 2
+#' set.seed(1234)
+#' X <- rnorm(100)
+#' Y <- X + rnorm(100)
+#' test_results <- dsc_null_test(X, Y, S, V, Spp)
+#' print(test_results)
+#'
+#' @export
+dsc_null_test <-
+  function(
+    X, #forecast
+    Y, # realization,
+    S,
+    V ,# identification function, V:= S'
+    Spp # S''
+  ){
+
+    # Check if S, V, and Spp are functions
+    if(!is.function(S)) {stop("Please provide a function for scoring function 'S'.")}
+    if(!is.function(V)) {stop("Please provide a function for identification function 'V'.")}
+    if(!is.function(Spp)) {stop("Please provide a function for S''.")}
+
+    # Number of observations
+    tt <- length(X)
+
+    # Fit a linear model for Y on X
+    MZreg <- lm(Y ~ X)
+
+    # Perform the score decomposition
+    dec <- decomposition(
+      x = X,
+      x_rc = stats::fitted(MZreg),
+      y = Y,
+      S = S
+    )
+
+    # Get the model matrix and transpose it
+    W <- t(stats::model.matrix(MZreg)) %>% t()
+
+    # Compute the Wald p-value
+    wald_pval <-
+      car::linearHypothesis(
+        MZreg,
+        c("X=0"),
+        vcov. = sandwich::vcovHAC(MZreg)
+      ) $`Pr(>F)`[2]
+
+    # Compute the F-test p-value
+    model_summary <- summary(MZreg)
+    f_statistic <- model_summary$fstatistic[1]
+    f_p_value <- stats::pf(f_statistic, model_summary$fstatistic[2], model_summary$fstatistic[3], lower.tail = FALSE)
+
+    # Initialize H_i_T matrix
+    H_i_T <- matrix(0, nrow = 2, ncol = 2)
+    for (i in 1:nrow(W)) {
+      temp <- Spp(X, Y) * (W[i, ]) %*% t(W[i, ])
+      H_i_T <- H_i_T + temp
+    }
+    H_i_T <- H_i_T / tt
+
+    # Initialize H_T matrix
+    H_T <- matrix(0, nrow = 1, ncol = 1)
+    for (i in 1:nrow(W)) {
+      temp <- Spp(X, Y)
+      H_T <- H_T + temp
+    }
+    H_T <- H_T / tt
+
+    # Initialize score contributions matrix
+    score_contributions <- matrix(0, nrow = tt, ncol = 2 + 1)
+    for (t in 1:tt) {
+      r_t <- mean(Y)
+      theta_i_t <- W[t, ]
+      score_contributions[t, 1] <- V(r_t, Y[t])  # reference forecast
+      score_contributions[t, 2:(2 + 1)] <- W[t, ] * (V(stats::fitted(MZreg)[t], y = Y[t]))  # recalibrated forecast
+    }
+
+    # Compute the variance-covariance matrix using the HAC estimator
+    Pi_T <- tt * sandwich::vcovHAC(lm(score_contributions[, 2:3] ~ 1)) # only use relevant covariances (omit ref forecast as it drops out)
+
+    # Generate multivariate normal random variables
+    N <- MASS::mvrnorm(n = 1, mu = c(0, 0), Sigma = Pi_T) %>% t()
+
+    # Compute the p-value using the Imhof method for quadratic forms
+    dsc_pval <- CompQuadForm::imhof(
+      2 * (tt) * dec$dsc,
+      lambda = eigen(((solve(H_i_T) - (matrix(c(solve(H_T), 0, 0, 0), nrow = 2))) %*% Pi_T))$values
+    )$Qq
+
+    # Compute the DSC variance
+    dsc_var = (N) %*% (solve(H_i_T) - (matrix(c(solve(H_T), 0, 0, 0), nrow = 2))) %*% t(N) %>% as.numeric()
+
+    # Create a tibble with the results
+    sol <-
+      tibble(
+        dsc = dec$dsc,
+        dsc_var = dsc_var,
+        dsc_pval = dsc_pval,
+        f_pval = f_p_value,
+        wald_pval = wald_pval
+      )
+
+    # Return the results
+    return(sol)
+  }
+
 
 
 
@@ -499,6 +634,7 @@ decomposition <- function(
 #' @details
 #' This function computes p-values for s, mcb, and dsc components based on the specified theory.
 #' It also calculates the original DM p-value for the s component.
+#'
 #' @export
 
 get_pval <- function(

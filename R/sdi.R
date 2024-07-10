@@ -19,9 +19,9 @@ NULL
 #'   - `mcbnulltest_X1`: results of the miscalibration null test for the first forecast.
 #'   - `mcbnulltest_X2`: results of the miscalibration null test for the second forecast.
 #'   - `mcbIUUI`: combined p-values for the miscalibration tests.
-#'   - `dscnulltestX1`: placeholder for discrimination null test for the first forecast (currently NA).
-#'   - `dscnulltestX2`: placeholder for discrimination null test for the second forecast (currently NA).
-#'   - `dscIUUI`: placeholder for combined p-values for the discrimination tests (currently NA).
+#'   - `dscnulltestX1`: placeholder for discrimination null test for the first forecast.
+#'   - `dscnulltestX2`: placeholder for discrimination null test for the second forecast.
+#'   - `dscIUUI`: placeholder for combined p-values for the discrimination test.
 #'   - `mySDIvar`: the selected variance of the SDI.
 #'   - `dm`: a data frame with the Diebold-Mariano test results including `dm_asy_var`, `dm_stat`, and `dm_pval`.
 #'
@@ -86,9 +86,30 @@ SDI <- function(
     )
   )
 
-  dscnulltestX1 <- NA
-  dscnulltestX2 <- NA
-  dscIUUI <- NA
+  dscnulltest_X1 <- dsc_null_test(
+    X = X_1,
+    Y = Y,
+    S=S,
+    V=V,
+    Spp=Spp
+  )
+
+  dscnulltest_X2 <- dsc_null_test(
+    X = X_2,
+    Y = Y,
+    S=S,
+    V=V,
+    Spp=Spp
+  )
+
+  dscIUUI <- pmax(
+    asyvardm$pvals$dsc_pval,
+    2*pmin(
+      dscnulltest_X1$dsc_pval,
+      dscnulltest_X2$dsc_pval
+    )
+  )
+
 
 
   if(is.null(selectionvector)){
@@ -124,8 +145,8 @@ SDI <- function(
       mcbnulltest_X1=mcbnulltest_X1,
       mcbnulltest_X1=mcbnulltest_X1,
       mcbIUUI=mcbIUUI,
-      dscnulltestX1=dscnulltestX1,
-      dscnulltestX2=dscnulltestX2,
+      dscnulltest_X1=dscnulltest_X1,
+      dscnulltest_X2=dscnulltest_X2,
       dscIUUI=dscIUUI,
       mySDIvar=mySDIvar,
       dm=dm
