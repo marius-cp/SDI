@@ -4,7 +4,7 @@
 \alias{asy_var_dm}
 \title{Calculate variance of the decomposition components for two (rival) forecasts based on Mincer-Zarnowitz regressions.}
 \usage{
-asy_var_dm(X_1, X_2, Y, S, V, Spp)
+asy_var_dm(X_1, X_2, Y, S, V, Spp, vcov_estimator = sandwich::NeweyWest)
 }
 \arguments{
 \item{X_1}{Numeric vector  for the first forecast.}
@@ -18,12 +18,15 @@ asy_var_dm(X_1, X_2, Y, S, V, Spp)
 \item{V}{Function, the identification function, where V is the derivative of S.}
 
 \item{Spp}{Function, second derivative of the scoring function, default is NA.}
+
+\item{vcov_estimator}{Function, variance-covariance estimator from the sandwich package.}
 }
 \value{
 A list containing several components:
   - `asy_vars`: a data frame with the variances of s, mcb, and dsc for both forecasts.
   - `pvals`: p-values for testing the significance of differences.
   - `Lambda`: matrix used in the variance calculations.
+  - `temp_Omega`: raw matrix of a_{1,t}, ..., e_t that is used to estimat cov matrix
   - `Omega`: covariance matrix based on the scoring function.
   - `eta`: transformation matrix used in variance calculations.
   - `Gamma`: product of eta and Lambda matrices.

@@ -4,7 +4,7 @@
 \alias{dsc_null_test}
 \title{Test for zero discrimination (DSC=0)}
 \usage{
-dsc_null_test(X, Y, S, V, Spp)
+dsc_null_test(X, Y, S, V, Spp, vcov_estimator = sandwich::NeweyWest)
 }
 \arguments{
 \item{X}{A numeric vector representing the forecast values.}
@@ -16,6 +16,8 @@ dsc_null_test(X, Y, S, V, Spp)
 \item{V}{Identification function, first derivative of the score (V := S').}
 
 \item{Spp}{Second derivative of the score (S'').}
+
+\item{vcov_estimator}{Function, variance-covariance estimator from the sandwich package.}
 }
 \value{
 A tibble containing the results of the dynamic stochastic calibration tests, including

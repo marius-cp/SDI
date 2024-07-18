@@ -14,11 +14,13 @@ NULL
 #' @param S Function, the scoring function used to assess the forecasts.
 #' @param V Function, the identification function, where V is the derivative of S.
 #' @param Spp Function, second derivative of the scoring function, default is NA.
+#' @param vcov_estimator Function, variance-covariance estimator from the sandwich package.
 #'
 #' @return A list containing several components:
 #'   - `asy_vars`: a data frame with the variances of s, mcb, and dsc for both forecasts.
 #'   - `pvals`: p-values for testing the significance of differences.
 #'   - `Lambda`: matrix used in the variance calculations.
+#'   - `temp_Omega`: raw matrix of a_{1,t}, ..., e_t that is used to estimat cov matrix
 #'   - `Omega`: covariance matrix based on the scoring function.
 #'   - `eta`: transformation matrix used in variance calculations.
 #'   - `Gamma`: product of eta and Lambda matrices.
@@ -51,7 +53,8 @@ asy_var_dm <- function(
     Y,
     S,
     V ,
-    Spp
+    Spp,
+    vcov_estimator = sandwich::NeweyWest
 ){
 
   tt <- length(Y)
@@ -144,23 +147,8 @@ asy_var_dm <- function(
       #u = V(x = marg(Y), y = Y)
     ))
 
-  # cor(temp_Omega)
-  # cor(mz_1,X_1)
-  # cor(V(x = (mz_1), y = Y) , V(x = (mz_1), y = Y) * X_1)
-  # cor(S(y = Y, x = X_1), S(y = Y, x = (mz_1)))
+  Omega <- vcov_estimator(lm(temp_Omega ~ 1))
 
-  # makes some problems for the DSC=0 simulations
-  # Omega <-  1 * sandwich::NeweyWest(
-  #   lm(temp_Omega ~ 1)
-  # )
-  # eigen(Omega)$values
-
-  Omega <-
-    1 * sandwich::vcovHAC(
-      lm(temp_Omega ~ 1)
-    )
-
-  eigen(Omega)$values
 
   omega1 <- t(c(1,-1,-1,1) )# for classical DM test
   omega2 <- t(c(1,0,-1,0)) # for MCB test
@@ -197,6 +185,7 @@ asy_var_dm <- function(
       Lambda = Lambda,
       eta = eta,
       Gamma=Gamma,
+      temp_Omega = temp_Omega,
       Omega = Omega,
       dec_1=dec_1,
       dec_2=dec_2
@@ -221,6 +210,7 @@ asy_var_dm <- function(
 #' @param S scoring function
 #' @param V identification function, first derivative of score V:= S'
 #' @param Spp  second derviative of score S''
+#' @param vcov_estimator Function, variance-covariance estimator from the sandwich package.
 #' @return A tibble containing the results of the mis-calibration tests, including
 #'         the MCB value, MCB variance, MCB p-value, Mincer-Zarnowitz p-value,
 #'         and F-test p-value.
@@ -255,7 +245,8 @@ mcb_null_test <-
     Y, # realization,
     S,
     V ,# identification function, V:= S'
-    Spp # S''
+    Spp, # S''
+    vcov_estimator = sandwich::NeweyWest
   ){
 
     if(!is.function(S)) {stop("Please provide a function for scoreing function 'S'.")}
@@ -275,7 +266,7 @@ mcb_null_test <-
 
     W <- t(t(stats::model.matrix(MZreg)))
 
-    Sigma <-tt*sandwich::vcovHAC(
+    Sigma <-tt*vcov_estimator(
       lm(as.vector(V(stats::fitted(MZreg),y=Y))*W ~1)
     )
     Sigma
@@ -326,6 +317,7 @@ mcb_null_test <-
 #' @param S Scoring function.
 #' @param V Identification function, first derivative of the score (V := S').
 #' @param Spp Second derivative of the score (S'').
+#' @param vcov_estimator Function, variance-covariance estimator from the sandwich package.
 #' @return A tibble containing the results of the dynamic stochastic calibration tests, including
 #'         the DSC value, DSC variance, DSC p-value, Mincer-Zarnowitz p-value, and Wald test p-value.
 #'
@@ -355,7 +347,8 @@ dsc_null_test <-
     Y, # realization,
     S,
     V ,# identification function, V:= S'
-    Spp # S''
+    Spp, # S''
+    vcov_estimator = sandwich::NeweyWest
   ){
 
     # Check if S, V, and Spp are functions
@@ -385,7 +378,7 @@ dsc_null_test <-
       car::linearHypothesis(
         MZreg,
         c("X=0"),
-        vcov. = sandwich::vcovHAC(MZreg)
+        vcov. = vcov_estimator(MZreg)
       ) $`Pr(>F)`[2]
 
     # Compute the F-test p-value
@@ -419,7 +412,7 @@ dsc_null_test <-
     }
 
     # Compute the variance-covariance matrix using the HAC estimator
-    Pi_T <- tt * sandwich::vcovHAC(lm(score_contributions[, 2:3] ~ 1)) # only use relevant covariances (omit ref forecast as it drops out)
+    Pi_T <- tt * vcov_estimator(lm(score_contributions[, 2:3] ~ 1)) # only use relevant covariances (omit ref forecast as it drops out)
 
     # Generate multivariate normal random variables
     N <- MASS::mvrnorm(n = 1, mu = c(0, 0), Sigma = Pi_T) %>% t()
@@ -672,6 +665,7 @@ get_pval <- function(
 #'
 #' @param haty Numeric vector of forecasted values.
 #' @param y Numeric vector of actual values.
+#' @param vcov_estimator Function, variance-covariance estimator from the sandwich package.
 #'
 #' @return A list containing several components:
 #'   - `estimate`: Estimated coefficients from the Mincer-Zarnowitz regression.
@@ -697,11 +691,15 @@ get_pval <- function(
 #' print(results)
 #'
 #' @export
-MZ.test.mean <- function(haty, y){
+MZ.test.mean <- function(
+    haty,
+    y,
+    vcov_estimator = sandwich::NeweyWest
+    ){
   MZ.fit <- stats::lm(y~haty)
-  coefci <- lmtest::coefci(MZ.fit, vcov. = sandwich::vcovHAC) %>% round(3)
+  coefci <- lmtest::coefci(MZ.fit, vcov. = vcov_estimator) %>% round(3)
   # below solve() returns the inverse of the covar matrix
-  W <- t(stats::coef(MZ.fit) - c(0,1)) %*% solve(sandwich::vcovHAC(MZ.fit)) %*% (stats::coef(MZ.fit) - c(0,1))
+  W <- t(stats::coef(MZ.fit) - c(0,1)) %*% solve(vcov_estimator(MZ.fit)) %*% (stats::coef(MZ.fit) - c(0,1))
   pval <- 1 - stats::pchisq(W,2) %>% round(3)
   return(list(estimate=stats::coef(MZ.fit),
               CI=coefci,

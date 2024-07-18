@@ -13,6 +13,7 @@ NULL
 #' @param V Function, the identification function, where V is the derivative of S.
 #' @param Spp Function, second derivative of the scoring function, default is NA.
 #' @param selectionvector A (optional) 1x4 matrix object specifying the selection vector. Default is a 1x4 matrix of ones.
+#' @param vcov_estimator Function, variance-covariance estimator from the sandwich package.
 #'
 #' @return A list of class "SDI" containing several components:
 #'   - `asyvardm`: a list with the variance decomposition results including `asy_vars`, `pvals`, `Lambda`, `Omega`, `eta`, `Gamma`, `dec_1`, and `dec_2`.
@@ -48,7 +49,8 @@ SDI <- function(
     S, # scoring function
     V ,# identification function, V:= S'
     Spp = NA,  # S''
-    selectionvector = matrix(c(1,1,1,1), nrow = 1, ncol = 4) # selection vector
+    selectionvector = matrix(c(1,1,1,1), nrow = 1, ncol = 4), # selection vector
+    vcov_estimator = sandwich::NeweyWest
 ){
 
   tt <- nrow(Y)
@@ -59,7 +61,8 @@ SDI <- function(
     Y=Y,
     S=S,
     V=V,
-    Spp = Spp
+    Spp = Spp,
+    vcov_estimator = vcov_estimator
   )
 
   mcbnulltest_X1 <- mcb_null_test(
@@ -67,7 +70,8 @@ SDI <- function(
     Y = Y,
     S=S,
     V=V,
-    Spp=Spp
+    Spp=Spp,
+    vcov_estimator = vcov_estimator
   )
 
   mcbnulltest_X2 <- mcb_null_test(
@@ -75,7 +79,8 @@ SDI <- function(
     Y = Y,
     S=S,
     V=V,
-    Spp=Spp
+    Spp=Spp,
+    vcov_estimator = vcov_estimator
   )
 
   mcbIUUI <- pmax(
@@ -91,7 +96,8 @@ SDI <- function(
     Y = Y,
     S=S,
     V=V,
-    Spp=Spp
+    Spp=Spp,
+    vcov_estimator = vcov_estimator
   )
 
   dscnulltest_X2 <- dsc_null_test(
@@ -99,7 +105,8 @@ SDI <- function(
     Y = Y,
     S=S,
     V=V,
-    Spp=Spp
+    Spp=Spp,
+    vcov_estimator = vcov_estimator
   )
 
   dscIUUI <- pmax(
@@ -128,9 +135,7 @@ SDI <- function(
 
   #original DM
   dm_asy_var <-
-    sandwich::vcovHAC(
-      lm( as.numeric(S(x=X_1,y=Y) - S(x=X_2,y=Y)) ~ 1 )
-    ) %>% as.numeric()
+    vcov_estimator(lm( as.numeric(S(x=X_1,y=Y) - S(x=X_2,y=Y)) ~ 1 )) %>% as.numeric()
   dm_stat <- mean(S(x=X_1,y=Y) - S(x=X_2,y=Y)) / sqrt(dm_asy_var) %>% as.numeric()
   dm_pval <- 2 * stats::pt(-abs(dm_stat), df = tt - 1) %>% as.numeric()
   dm <- tibble::tibble(

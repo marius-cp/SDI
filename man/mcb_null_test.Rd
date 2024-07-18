@@ -4,7 +4,7 @@
 \alias{mcb_null_test}
 \title{Test for Miscalibration (MCB=0)}
 \usage{
-mcb_null_test(X, Y, S, V, Spp)
+mcb_null_test(X, Y, S, V, Spp, vcov_estimator = sandwich::NeweyWest)
 }
 \arguments{
 \item{X}{A numeric vector representing the forecast values.}
@@ -16,6 +16,8 @@ mcb_null_test(X, Y, S, V, Spp)
 \item{V}{identification function, first derivative of score V:= S'}
 
 \item{Spp}{second derviative of score S''}
+
+\item{vcov_estimator}{Function, variance-covariance estimator from the sandwich package.}
 }
 \value{
 A tibble containing the results of the mis-calibration tests, including

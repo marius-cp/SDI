@@ -4,12 +4,14 @@
 \alias{MZ.test.mean}
 \title{Mincer-Zarnowitz Mean Test}
 \usage{
-MZ.test.mean(haty, y)
+MZ.test.mean(haty, y, vcov_estimator = sandwich::NeweyWest)
 }
 \arguments{
 \item{haty}{Numeric vector of forecasted values.}
 
 \item{y}{Numeric vector of actual values.}
+
+\item{vcov_estimator}{Function, variance-covariance estimator from the sandwich package.}
 }
 \value{
 A list containing several components:

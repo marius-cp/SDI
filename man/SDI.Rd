@@ -11,7 +11,8 @@ SDI(
   S,
   V,
   Spp = NA,
-  selectionvector = matrix(c(1, 1, 1, 1), nrow = 1, ncol = 4)
+  selectionvector = matrix(c(1, 1, 1, 1), nrow = 1, ncol = 4),
+  vcov_estimator = sandwich::NeweyWest
 )
 }
 \arguments{
@@ -28,6 +29,8 @@ SDI(
 \item{Spp}{Function, second derivative of the scoring function, default is NA.}
 
 \item{selectionvector}{A (optional) 1x4 matrix object specifying the selection vector. Default is a 1x4 matrix of ones.}
+
+\item{vcov_estimator}{Function, variance-covariance estimator from the sandwich package.}
 }
 \value{
 A list of class "SDI" containing several components:
