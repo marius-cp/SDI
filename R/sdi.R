@@ -148,7 +148,7 @@ SDI <- function(
     list(
       asyvardm=asyvardm,
       mcbnulltest_X1=mcbnulltest_X1,
-      mcbnulltest_X1=mcbnulltest_X1,
+      mcbnulltest_X2=mcbnulltest_X2,
       mcbIUUI=mcbIUUI,
       dscnulltest_X1=dscnulltest_X1,
       dscnulltest_X2=dscnulltest_X2,
