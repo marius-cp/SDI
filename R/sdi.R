@@ -14,6 +14,7 @@ NULL
 #' @param Spp Function, second derivative of the scoring function, default is NA.
 #' @param selectionvector A (optional) 1x4 matrix object specifying the selection vector. Default is a 1x4 matrix of ones.
 #' @param vcov_estimator Function, variance-covariance estimator from the sandwich package.
+#'@param tol See `asy_var_dm()`.
 #'
 #' @return A list of class "SDI" containing several components:
 #'   - `asyvardm`: a list with the variance decomposition results including `asy_vars`, `pvals`, `Lambda`, `Omega`, `eta`, `Gamma`, `dec_1`, and `dec_2`.
@@ -50,7 +51,8 @@ SDI <- function(
     V ,# identification function, V:= S'
     Spp = NA,  # S''
     selectionvector = matrix(c(1,1,1,1), nrow = 1, ncol = 4), # selection vector
-    vcov_estimator = sandwich::vcovHAC
+    vcov_estimator = sandwich::vcovHAC,
+    tol=50
     ){
 
   tt <- nrow(Y)
@@ -62,7 +64,8 @@ SDI <- function(
     S=S,
     V=V,
     Spp = Spp,
-    vcov_estimator = vcov_estimator
+    vcov_estimator = vcov_estimator,
+    tol=50
   )
 
   mcbnulltest_X1 <- mcb_null_test(

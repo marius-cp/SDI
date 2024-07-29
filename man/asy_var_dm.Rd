@@ -4,7 +4,16 @@
 \alias{asy_var_dm}
 \title{Calculate variance of the decomposition components for two (rival) forecasts based on Mincer-Zarnowitz regressions.}
 \usage{
-asy_var_dm(X_1, X_2, Y, S, V, Spp, vcov_estimator = sandwich::vcovHAC)
+asy_var_dm(
+  X_1,
+  X_2,
+  Y,
+  S,
+  V,
+  Spp,
+  vcov_estimator = sandwich::vcovHAC,
+  tol = 50
+)
 }
 \arguments{
 \item{X_1}{Numeric vector  for the first forecast.}
@@ -20,6 +29,9 @@ asy_var_dm(X_1, X_2, Y, S, V, Spp, vcov_estimator = sandwich::vcovHAC)
 \item{Spp}{Function, second derivative of the scoring function, default is NA.}
 
 \item{vcov_estimator}{Function, variance-covariance estimator from the sandwich package.}
+
+\item{tol}{It can happen the determinat is not meaningfully calculated. We check for it with `det(Omega) <= 10^(-tol)`.
+In this case the `Omega` output is a 5x5 matrix of `NaN` values.}
 }
 \value{
 A list containing several components:

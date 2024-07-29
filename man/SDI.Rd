@@ -12,7 +12,8 @@ SDI(
   V,
   Spp = NA,
   selectionvector = matrix(c(1, 1, 1, 1), nrow = 1, ncol = 4),
-  vcov_estimator = sandwich::vcovHAC
+  vcov_estimator = sandwich::vcovHAC,
+  tol = 50
 )
 }
 \arguments{
@@ -31,6 +32,8 @@ SDI(
 \item{selectionvector}{A (optional) 1x4 matrix object specifying the selection vector. Default is a 1x4 matrix of ones.}
 
 \item{vcov_estimator}{Function, variance-covariance estimator from the sandwich package.}
+
+\item{tol}{See `asy_var_dm()`.}
 }
 \value{
 A list of class "SDI" containing several components:

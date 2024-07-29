@@ -15,6 +15,8 @@ NULL
 #' @param V Function, the identification function, where V is the derivative of S.
 #' @param Spp Function, second derivative of the scoring function, default is NA.
 #' @param vcov_estimator Function, variance-covariance estimator from the sandwich package.
+#' @param tol It can happen the determinat is not meaningfully calculated. We check for it with `det(Omega) <= 10^(-tol)`.
+#' In this case the `Omega` output is a 5x5 matrix of `NaN` values.
 #'
 #' @return A list containing several components:
 #'   - `asy_vars`: a data frame with the variances of s, mcb, and dsc for both forecasts.
@@ -57,8 +59,9 @@ asy_var_dm <- function(
     S,
     V ,
     Spp,
-    vcov_estimator = sandwich::vcovHAC
-){
+    vcov_estimator = sandwich::vcovHAC,
+    tol = 50
+    ){
 
   tt <- length(Y)
 
@@ -151,12 +154,15 @@ asy_var_dm <- function(
     ))
 
   Omega <- tryCatch(vcov_estimator(lm(temp_Omega ~ 1)), error = function(e){FALSE})
+
   Omega <- if(identical(Omega, FALSE)) {
     matrix(NaN, nrow = 5, ncol = 5)
-    } else {
+  } else if ( is.matrix(Omega) && det(Omega) <= 10^(-tol)){
+    matrix(NaN, nrow = 5, ncol = 5)
+  } else {
     Omega
-      }
-  Omega
+  }
+
 
 
   omega1 <- t(c(1,-1,-1,1) )# for classical DM test
