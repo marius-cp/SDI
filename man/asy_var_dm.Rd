@@ -37,6 +37,12 @@ A list containing several components:
 This function computes variance of the score decomposition for two rival forecasts X_1 and X_2
 based on the provided data. It calculates components related to the score (s), miscalibration (mcb), and discrimination (dsc).
 }
+\details{
+It can happen that a) covariance matrix estimation fails or b) the
+determinat is not meaningful. We check for b) with `det(Omega) <= 10^(-15)`.
+In any of the two cases the `Omega` output is a 5x5 matrix of `NaN` values.
+The p-values are set to 1 in this case to facilitate conservative test decisions.
+}
 \examples{
 # Define a simple scoring function
 S <- function(y, x) { (y - x)^2 }
