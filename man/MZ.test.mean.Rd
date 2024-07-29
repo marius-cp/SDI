@@ -4,7 +4,7 @@
 \alias{MZ.test.mean}
 \title{Mincer-Zarnowitz Mean Test}
 \usage{
-MZ.test.mean(haty, y, vcov_estimator = sandwich::NeweyWest)
+MZ.test.mean(haty, y, vcov_estimator = sandwich::vcovHAC)
 }
 \arguments{
 \item{haty}{Numeric vector of forecasted values.}

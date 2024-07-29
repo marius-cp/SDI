@@ -54,7 +54,7 @@ asy_var_dm <- function(
     S,
     V ,
     Spp,
-    vcov_estimator = sandwich::NeweyWest
+    vcov_estimator = sandwich::vcovHAC
 ){
 
   tt <- length(Y)
@@ -246,7 +246,7 @@ mcb_null_test <-
     S,
     V ,# identification function, V:= S'
     Spp, # S''
-    vcov_estimator = sandwich::NeweyWest
+    vcov_estimator = sandwich::vcovHAC
   ){
 
     if(!is.function(S)) {stop("Please provide a function for scoreing function 'S'.")}
@@ -348,7 +348,7 @@ dsc_null_test <-
     S,
     V ,# identification function, V:= S'
     Spp, # S''
-    vcov_estimator = sandwich::NeweyWest
+    vcov_estimator = sandwich::vcovHAC
   ){
 
     # Check if S, V, and Spp are functions
@@ -694,7 +694,7 @@ get_pval <- function(
 MZ.test.mean <- function(
     haty,
     y,
-    vcov_estimator = sandwich::NeweyWest
+    vcov_estimator = sandwich::vcovHAC
     ){
   MZ.fit <- stats::lm(y~haty)
   coefci <- lmtest::coefci(MZ.fit, vcov. = vcov_estimator) %>% round(3)

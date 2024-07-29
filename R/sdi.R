@@ -50,8 +50,8 @@ SDI <- function(
     V ,# identification function, V:= S'
     Spp = NA,  # S''
     selectionvector = matrix(c(1,1,1,1), nrow = 1, ncol = 4), # selection vector
-    vcov_estimator = sandwich::NeweyWest
-){
+    vcov_estimator = sandwich::vcovHAC
+    ){
 
   tt <- nrow(Y)
 
@@ -134,8 +134,18 @@ SDI <- function(
   }
 
   #original DM
-  dm_asy_var <-
-    vcov_estimator(lm( as.numeric(S(x=X_1,y=Y) - S(x=X_2,y=Y)) ~ 1 )) %>% as.numeric()
+  # sometimes original DM fails in my simulations.
+  # If so, we are super conservative and set the test statistic to 0 (ie pval to 1).
+  tryCatch(
+    {dm_asy_var <-
+      vcov_estimator(
+        lm(
+          as.numeric(S(x = X_1, y = Y) - S(x = X_2, y = Y)) ~ 1
+        )
+      ) %>% as.numeric()},
+    error = function(e) {
+      dm_asy_var <- 9999999
+    })
   dm_stat <- mean(S(x=X_1,y=Y) - S(x=X_2,y=Y)) / sqrt(dm_asy_var) %>% as.numeric()
   dm_pval <- 2 * stats::pt(-abs(dm_stat), df = tt - 1) %>% as.numeric()
   dm <- tibble::tibble(

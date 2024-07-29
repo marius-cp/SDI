@@ -4,7 +4,7 @@
 \alias{asy_var_dm}
 \title{Calculate variance of the decomposition components for two (rival) forecasts based on Mincer-Zarnowitz regressions.}
 \usage{
-asy_var_dm(X_1, X_2, Y, S, V, Spp, vcov_estimator = sandwich::NeweyWest)
+asy_var_dm(X_1, X_2, Y, S, V, Spp, vcov_estimator = sandwich::vcovHAC)
 }
 \arguments{
 \item{X_1}{Numeric vector  for the first forecast.}

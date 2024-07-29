@@ -4,7 +4,7 @@
 \alias{dsc_null_test}
 \title{Test for zero discrimination (DSC=0)}
 \usage{
-dsc_null_test(X, Y, S, V, Spp, vcov_estimator = sandwich::NeweyWest)
+dsc_null_test(X, Y, S, V, Spp, vcov_estimator = sandwich::vcovHAC)
 }
 \arguments{
 \item{X}{A numeric vector representing the forecast values.}

@@ -4,7 +4,7 @@
 \alias{mcb_null_test}
 \title{Test for Miscalibration (MCB=0)}
 \usage{
-mcb_null_test(X, Y, S, V, Spp, vcov_estimator = sandwich::NeweyWest)
+mcb_null_test(X, Y, S, V, Spp, vcov_estimator = sandwich::vcovHAC)
 }
 \arguments{
 \item{X}{A numeric vector representing the forecast values.}

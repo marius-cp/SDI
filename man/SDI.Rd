@@ -12,7 +12,7 @@ SDI(
   V,
   Spp = NA,
   selectionvector = matrix(c(1, 1, 1, 1), nrow = 1, ncol = 4),
-  vcov_estimator = sandwich::NeweyWest
+  vcov_estimator = sandwich::vcovHAC
 )
 }
 \arguments{
