@@ -136,16 +136,13 @@ SDI <- function(
   #original DM
   # sometimes original DM fails in my simulations.
   # If so, we are super conservative and set the test statistic to 0 (ie pval to 1).
-  tryCatch(
-    {dm_asy_var <-
-      vcov_estimator(
-        lm(
-          as.numeric(S(x = X_1, y = Y) - S(x = X_2, y = Y)) ~ 1
-        )
-      ) %>% as.numeric()},
-    error = function(e) {
-      dm_asy_var <- 9999999
-    })
+  dm_asy_var <- tryCatch(
+    {
+      vcov_estimator(lm(as.numeric(S(x = X_1, y = Y) - S(x = X_2, y = Y)) ~ 1)) %>%
+        as.numeric()
+    },
+    error = function(e) {999}
+  )
   dm_stat <- mean(S(x=X_1,y=Y) - S(x=X_2,y=Y)) / sqrt(dm_asy_var) %>% as.numeric()
   dm_pval <- 2 * stats::pt(-abs(dm_stat), df = tt - 1) %>% as.numeric()
   dm <- tibble::tibble(
