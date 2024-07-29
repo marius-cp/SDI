@@ -27,9 +27,8 @@ NULL
 #'   - `dec_1`: decomposition results for the first forecast.
 #'   - `dec_2`: decomposition results for the second forecast.
 #'
-#' @details It can happen that a) covariance matrix estimation fails or b) the
-#' determinat is not meaningful. We check for b) with `det(Omega) <= 10^(-50)`.
-#' In any of the two cases the `Omega` output is a 5x5 matrix of `NaN` values.
+#' @details It can happen that covariance matrix estimation fails.
+#' In this cases the `Omega` output is a 5x5 matrix of `NaN` values.
 #' The p-values are set to 1 in this case to facilitate conservative test decisions.
 #'
 #' @importFrom magrittr `%>%`
@@ -154,11 +153,9 @@ asy_var_dm <- function(
   Omega <- tryCatch(vcov_estimator(lm(temp_Omega ~ 1)), error = function(e){FALSE})
   Omega <- if(identical(Omega, FALSE)) {
     matrix(NaN, nrow = 5, ncol = 5)
-  } else if ( is.matrix(Omega) && det(Omega) <= 10^(-50)){
-    matrix(NaN, nrow = 5, ncol = 5)
-  } else {
+    } else {
     Omega
-  }
+      }
   Omega
 
 
