@@ -65,7 +65,7 @@ SDI <- function(
     V=V,
     Spp = Spp,
     vcov_estimator = vcov_estimator,
-    tol=50
+    tol=tol
   )
 
   mcbnulltest_X1 <- mcb_null_test(
