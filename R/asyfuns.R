@@ -406,7 +406,7 @@ dsc_null_test <-
     # Initialize H_i_T matrix
     H_i_T <- matrix(0, nrow = 2, ncol = 2)
     for (i in 1:nrow(W)) {
-      temp <- Spp(X, Y) * (W[i, ]) %*% t(W[i, ])
+      temp <- Spp(X[i], Y[i]) * (W[i, ]) %*% t(W[i, ])
       H_i_T <- H_i_T + temp
     }
     H_i_T <- H_i_T / tt
@@ -414,7 +414,7 @@ dsc_null_test <-
     # Initialize H_T matrix
     H_T <- matrix(0, nrow = 1, ncol = 1)
     for (i in 1:nrow(W)) {
-      temp <- Spp(X, Y)
+      temp <- Spp(X[i], Y[i]) # Use reference forecast instead? should not matter under H_0.
       H_T <- H_T + temp
     }
     H_T <- H_T / tt
