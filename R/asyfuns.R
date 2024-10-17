@@ -270,24 +270,33 @@ mcb_null_test <-
     if(!is.function(V)) {stop("Please provide a function for identification function 'V'.")}
     if(!is.function(Spp)) {stop("Please provide a function for S''.")}
 
+
     tt <- length(X)
 
     # todo: flexible MZ reg functions!
-    MZreg <- lm(Y~X)
+
+    MZ <- MZdec(
+      x = X,
+      y = Y,
+      S = S
+    )
+
     dec <- decomposition(
       x=X,
-      x_rc=stats::fitted(MZreg),
+      x_rc=MZ$x_rc,
       y=Y,
       S=S
-    )#, S=scoring_fun)
+    )
 
-    W <- t(t(stats::model.matrix(MZreg)))
+
+
+    MZreg <- lm(Y~X)
+    W <- t(t(stats::model.matrix(MZreg))) # use lm to quickly generate W=(1,X)'
 
     Sigma <-tt*vcov_estimator(
-      lm(as.vector(V(stats::fitted(MZreg),y=Y))*W ~1)
+      lm(as.vector(V(x=MZ$x_rc,y=Y))*W ~ 1)
     )
     Sigma
-
 
     Omega<- matrix(0, nrow=2,ncol=2)
     for (i in 1:nrow(W)) {
@@ -298,9 +307,9 @@ mcb_null_test <-
 
     N <- t(t(MASS::mvrnorm(n=1,mu=c(0,0),Sigma=Sigma)))
 
+    # F test
     freg <- lm((Y-X) ~ X)
     fsum <- summary(freg)
-
     F_pval <-
       car::linearHypothesis(
         freg,
@@ -377,17 +386,22 @@ dsc_null_test <-
     tt <- length(X)
 
     # Fit a linear model for Y on X
-    MZreg <- lm(Y ~ X)
+    MZ <- MZdec(
+      x = X,
+      y = Y,
+      S = S
+    )
 
     # Perform the score decomposition
     dec <- decomposition(
       x = X,
-      x_rc = stats::fitted(MZreg),
+      x_rc = MZ$x_rc,
       y = Y,
       S = S
     )
 
     # Get the model matrix and transpose it
+    MZreg <- lm(Y ~ X)
     W <- t(stats::model.matrix(MZreg)) %>% t()
 
     # Compute the Wald p-value
@@ -425,7 +439,7 @@ dsc_null_test <-
       r_t <- mean(Y)
       theta_i_t <- W[t, ]
       score_contributions[t, 1] <- V(r_t, Y[t])  # reference forecast
-      score_contributions[t, 2:(2 + 1)] <- W[t, ] * (V(stats::fitted(MZreg)[t], y = Y[t]))  # recalibrated forecast
+      score_contributions[t, 2:(2 + 1)] <- W[t, ] * ( V(x= MZ$x_rc[t], y = Y[t]) )  # recalibrated forecast
     }
 
     # Compute the variance-covariance matrix using the HAC estimator
