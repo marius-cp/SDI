@@ -1,0 +1,60 @@
+---
+output: github_document
+---
+
+# SDI (Score Decompostion Inference)
+
+An R package to quantify the sampling uncertainty of Bregman type score decomposition. 
+
+## Installation 
+
+Development version: the  current version is available from GitHub.
+
+```{r, eval = FALSE}
+# install.packages("devtools")
+devtools::install_github("marius-cp/SDI")
+```
+
+
+
+## Example 
+
+* The following is based on the inflation application in the paper **Robust Mean Forecast Evaluation with Score Decompositions**; see [GitHub repository](https://github.com/marius-cp/InferenceScoreDecompositions). Link to the paper (to be included).
+
+```{r example1, warning=F, message=F}
+library(SDI)
+pathdata <- "/Users/mp/Library/CloudStorage/Dropbox/study/PhD/Projects/RM_CORP/github/InferenceScoreDecompositions/02_application/inflation/murphy_replication/inflation_mean.rds"
+
+dat <- readRDS(pathdata) %>% 
+  dplyr::filter(stemp_rlz<="2020-12-01")
+```
+
+* Apply the SDI function:
+
+```{r example2, warning=F, message=F}
+sdi <- 
+  SDI(
+  X_1 = dat$michigan, 
+  X_2 = dat$spf, 
+  Y = dat$rlz, 
+  S = function(x,y) (x-y)^2, 
+  V = function(x,y) (x-y)*2, 
+  Spp = function(x,y) 2
+)
+```
+
+
+* Extract the score decomposition for the Michigan and SPF forecasts:
+
+```{r example3, warning=F, message=F}
+sdi$asyvardm$dec_1 # michigan
+sdi$asyvardm$dec_2 #spf
+```
+
+* Extract the p-values of test for equal scores, equal miscalibration and equal discrimination:
+
+```{r example4, warning=F, message=F}
+sdi$asyvardm$pvals
+```
+
+
