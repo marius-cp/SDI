@@ -19,14 +19,14 @@ devtools::install_github("marius-cp/SDI")
 
 ## Example 
 
-* The following is based on the inflation application in the paper **Robust Mean Forecast Evaluation with Score Decompositions**; see [GitHub repository](https://github.com/marius-cp/InferenceScoreDecompositions). Link to the paper (to be included).
+* The following is based on the inflation application in the paper **Robust Mean Forecast Evaluation with Score Decompositions**; see [GitHub repository](https://github.com/marius-cp/chapter5phdthesis). Link to the paper (to be included).
 
 ```{r example1, warning=F, message=F}
 library(SDI)
-pathdata <- "/Users/mp/Library/CloudStorage/Dropbox/study/PhD/Projects/RM_CORP/github/InferenceScoreDecompositions/02_application/inflation/murphy_replication/inflation_mean.rds"
 
-dat <- readRDS(pathdata) %>% 
-  dplyr::filter(stemp_rlz<="2020-12-01")
+url <- "https://raw.githubusercontent.com/marius-cp/chapter5phdthesis/main/02_application/inflation/murphy_replication/inflation_mean.rds"
+dat <- readRDS(url(url)) %>%
+  dplyr::filter(stemp_rlz <= "2020-12-01")
 ```
 
 * Apply the SDI function:
