@@ -3,18 +3,18 @@
 #' @importFrom sandwich NeweyWest vcovHAC
 NULL
 
-#' Calculate variance of the decomposition components for two (rival) forecasts based on Mincer-Zarnowitz regressions.
+#' Calculate variance of the decomposition components for two (rival) mean forecasts based on Mincer-Zarnowitz regressions.
 #'
-#' This function computes variance of the score decomposition for two rival forecasts X_1 and X_2
-#' based on the provided data. It calculates components related to the score (s), miscalibration (mcb), and discrimination (dsc).
+#' This function computes the variance of the score decomposition for two rival mean forecasts X_1 and X_2 based on the provided data.
+#' It calculates the score (s), as well as the components of the score decomposition, i.e., miscalibration (mcb), and discrimination (dsc), and uncertainty (unc).
 #'
 #' @param X_1 Numeric vector  for the first forecast.
 #' @param X_2 Numeric vector for the second forecast.
 #' @param Y Numeric vector for the outcome variable.
-#' @param S Function, the scoring function used to assess the forecasts.
-#' @param V Function, the identification function, where V is the derivative of S.
-#' @param Spp Function, second derivative of the scoring function, default is NA.
-#' @param vcov_estimator Function, variance-covariance estimator from the sandwich package.
+#' @param S Function for the scoring function used to assess the mean forecasts.
+#' @param V Function for the identification function, where V is the derivative of S.
+#' @param Spp Function for second derivative of the scoring function, default is NA.
+#' @param vcov_estimator Function for variance-covariance estimator from the sandwich package.
 #' @param tol It can happen the determinat is not meaningfully calculated. We check for it with `det(Omega) <= 10^(-tol)`.
 #' In this case the `Omega` output is a 5x5 matrix of `NaN` values.
 #'
@@ -215,12 +215,12 @@ asy_var_dm <- function(
 
 
 
-#' Test for Miscalibration (MCB=0)
+#' Test for zero Miscalibration (MCB=0)
 #'
-#' This function implements tests for the null hypothesis of mis-calibration (MCB=0)
+#' This function implements tests for the null hypothesis of zero miscalibration (MCB=0)
 #' using forecast (X) and realization (Y) data. It employs two methods for testing:
-#' a generalized Chi-square test of the loss function decomposition,
-#' and the classical Mincer-Zarnowitz test. Both tests are valid under remark 3.1.
+#' a generalized Chi-square test of the loss function decomposition as proposed in the accombined paper
+#' and the classical Mincer-Zarnowitz test.
 #'
 #' @param X A numeric vector representing the forecast values.
 #' @param Y A numeric vector representing the actual realization values.
@@ -233,7 +233,7 @@ asy_var_dm <- function(
 #'         and F-test p-value.
 #'
 #' @details The function first regresses Y on X to extract fitted values and residuals,
-#'          then calculates the variance-covariance matrix using the Newey-West estimator.
+#'          then calculates the variance-covariance matrix using a HAC estimator.
 #'          It proceeds to compute the MCB value, its variance, and p-value using the
 #'          generalized Chi-square asymptotics. The Mincer-Zarnowitz test is conducted
 #'          as a comparative methodology. The F-test p-value is also computed for
@@ -348,7 +348,7 @@ mcb_null_test <-
 #'         the DSC value, DSC variance, DSC p-value, Mincer-Zarnowitz p-value, and Wald test p-value.
 #'
 #' @details The function first regresses Y on X to extract fitted values and residuals,
-#'          then calculates the variance-covariance matrix using the HAC estimator.
+#'          then calculates the variance-covariance matrix using a HAC estimator.
 #'          It proceeds to compute the DSC value, its variance, and p-value using the
 #'          generalized Chi-square asymptotics.
 #'
@@ -474,9 +474,9 @@ dsc_null_test <-
 
 
 
-#' Flexible MZ Mean Regression Using Different Scoring Functions
+#' Flexible MZ Mean Regression Using Different Bregman Scoring Functions
 #'
-#' This function fits a mean MZ regression using different loss functions S(x, y), e.g., for the squared error S(x, y) = (x - y)^2,
+#' This function fits a mean MZ regression using different Bregman scoring functions S(x, y), e.g., for the squared error \eqn{S(x, y) = (x - y)^2},
 #' where the forecast is x and the realization is y. All scoring functions must be Bregman scores.
 #' It returns the decomposition of the average score and the coefficients of the MZ regression under the given scoring function.
 #'
@@ -490,7 +490,6 @@ dsc_null_test <-
 #'   \item{dec}{tibble: Decomposition of the average score.}
 #'
 #' @details
-#' The function uses optimization techniques to estimate the parameters of the mean forecast model based on the specified loss function.
 #' Users should ensure that the scoring function adheres to the properties of Bregman scores.
 #'
 #' @examples
@@ -505,7 +504,6 @@ dsc_null_test <-
 #' @seealso
 #' \code{\link{optim}}, \code{\link{lm}}
 #'
-#' @keywords mean forecast loss function optimization
 #' @export
 #' @importFrom  magrittr `%>%`
 #'
@@ -571,7 +569,7 @@ MZdec <- function(x, y, S) {
 
   # only important for volatility !
   # qlike will not work in this case !
-  if(any(x_rc<0)){print("!!! Reklaibration returns negative value !!! ")}
+   if(any(x_rc<0)){print("!!! Reklaibration returns negative value !!! ")}
 
   dec <- decomposition(x=x, y=y, x_rc=x_rc, S=S)
 
@@ -581,12 +579,12 @@ MZdec <- function(x, y, S) {
 
 
 
-#' Decomposition of the Scoring Function
+#' Decomposition of the Bregman Score
 #'
-#' This function performs a decomposition of the scoring function given forecasts,
-#' recalibrated forecasts, and actual outcomes. It allows for flexible use of any scoring function `S`
-#' provided by the user, to calculate the mean score, marginal contribution bias (MCB),
-#' and the decomposition of the scoring contribution (DSC).
+#' This function performs a decomposition of any Bregman scoring function given forecasts,
+#' recalibrated forecasts, and actual outcomes. It allows for flexible use of any Bregman scoring function `S`
+#' provided by the user, to calculate the average score, the miscalibration component (MCB), the
+#' discrimination component (DSC), and the uncertainty component.
 #'
 #' @param x Numeric vector of forecast values.
 #' @param x_rc Numeric vector of recalibrated forecast values.
@@ -595,12 +593,10 @@ MZdec <- function(x, y, S) {
 #'   and returns a numeric value indicating the score.
 #'
 #' @return A tibble with columns:
-#'   - `s`: the mean score using the original forecast.
-#'   - `mcb`: marginal contribution bias, calculated as the difference between the mean scores of
-#'     the original and recalibrated forecasts.
-#'   - `dsc`: decomposition scoring contribution, calculated as the difference between the mean
-#'     score of the mean outcome and the recalibrated forecast.
-#'   - `unc`: unconditional mean score using the mean of the outcomes.
+#'   - `s`: the average score using the original forecast.
+#'   - `mcb`: miscalibration component
+#'   - `dsc`: discrimination component
+#'   - `unc`: uncertainty component
 #'
 #' @examples
 #' # Define a simple scoring function
