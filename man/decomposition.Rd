@@ -2,7 +2,7 @@
 % Please edit documentation in R/asyfuns.R
 \name{decomposition}
 \alias{decomposition}
-\title{Decomposition of the Scoring Function}
+\title{Decomposition of the Bregman Score}
 \usage{
 decomposition(x, x_rc, y, S)
 }
@@ -18,18 +18,16 @@ and returns a numeric value indicating the score.}
 }
 \value{
 A tibble with columns:
-  - `s`: the mean score using the original forecast.
-  - `mcb`: marginal contribution bias, calculated as the difference between the mean scores of
-    the original and recalibrated forecasts.
-  - `dsc`: decomposition scoring contribution, calculated as the difference between the mean
-    score of the mean outcome and the recalibrated forecast.
-  - `unc`: unconditional mean score using the mean of the outcomes.
+  - `s`: the average score using the original forecast.
+  - `mcb`: miscalibration component
+  - `dsc`: discrimination component
+  - `unc`: uncertainty component
 }
 \description{
-This function performs a decomposition of the scoring function given forecasts,
-recalibrated forecasts, and actual outcomes. It allows for flexible use of any scoring function `S`
-provided by the user, to calculate the mean score, marginal contribution bias (MCB),
-and the decomposition of the scoring contribution (DSC).
+This function performs a decomposition of any Bregman scoring function given forecasts,
+recalibrated forecasts, and actual outcomes. It allows for flexible use of any Bregman scoring function `S`
+provided by the user, to calculate the average score, the miscalibration component (MCB), the
+discrimination component (DSC), and the uncertainty component.
 }
 \examples{
 # Define a simple scoring function

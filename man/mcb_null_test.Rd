@@ -2,7 +2,7 @@
 % Please edit documentation in R/asyfuns.R
 \name{mcb_null_test}
 \alias{mcb_null_test}
-\title{Test for Miscalibration (MCB=0)}
+\title{Test for zero Miscalibration (MCB=0)}
 \usage{
 mcb_null_test(X, Y, S, V, Spp, vcov_estimator = sandwich::vcovHAC)
 }
@@ -25,14 +25,14 @@ A tibble containing the results of the mis-calibration tests, including
         and F-test p-value.
 }
 \description{
-This function implements tests for the null hypothesis of mis-calibration (MCB=0)
+This function implements tests for the null hypothesis of zero miscalibration (MCB=0)
 using forecast (X) and realization (Y) data. It employs two methods for testing:
-a generalized Chi-square test of the loss function decomposition,
-and the classical Mincer-Zarnowitz test. Both tests are valid under remark 3.1.
+a generalized Chi-square test of the loss function decomposition as proposed in the accombined paper
+and the classical Mincer-Zarnowitz test.
 }
 \details{
 The function first regresses Y on X to extract fitted values and residuals,
-         then calculates the variance-covariance matrix using the Newey-West estimator.
+         then calculates the variance-covariance matrix using a HAC estimator.
          It proceeds to compute the MCB value, its variance, and p-value using the
          generalized Chi-square asymptotics. The Mincer-Zarnowitz test is conducted
          as a comparative methodology. The F-test p-value is also computed for

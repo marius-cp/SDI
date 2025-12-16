@@ -24,5 +24,6 @@ Imports:
     CompQuadForm, 
     MASS, 
     lmtest, 
-    car
+    car, 
+    quantreg
     

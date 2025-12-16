@@ -2,7 +2,7 @@
 % Please edit documentation in R/sdi.R
 \name{SDI}
 \alias{SDI}
-\title{Score Decomposition Inference (SDI)}
+\title{Score Decomposition Inference (SDI) for Mean Forecasts}
 \usage{
 SDI(
   X_1,
@@ -23,7 +23,7 @@ SDI(
 
 \item{Y}{Numeric vector for the outcome variable.}
 
-\item{S}{Function, the scoring function used to assess the forecasts.}
+\item{S}{Function, the scoring function used to assess the mean forecasts.}
 
 \item{V}{Function, the identification function, where V is the derivative of S.}
 
@@ -48,7 +48,7 @@ A list of class "SDI" containing several components:
   - `dm`: a data frame with the Diebold-Mariano test results including `dm_asy_var`, `dm_stat`, and `dm_pval`.
 }
 \description{
-This function provides a wrapper for calculating the variance of the decomposition components for two (rival) forecasts
+This function provides a wrapper for calculating the variance of the decomposition components for two (rival) mean forecasts
 based on Mincer-Zarnowitz regressions, along with performing null tests for miscalibration and discrimination.
 }
 \examples{

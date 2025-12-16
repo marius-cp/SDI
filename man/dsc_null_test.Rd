@@ -31,7 +31,7 @@ reported.
 }
 \details{
 The function first regresses Y on X to extract fitted values and residuals,
-         then calculates the variance-covariance matrix using the HAC estimator.
+         then calculates the variance-covariance matrix using a HAC estimator.
          It proceeds to compute the DSC value, its variance, and p-value using the
          generalized Chi-square asymptotics.
 
