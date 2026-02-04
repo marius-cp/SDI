@@ -220,8 +220,8 @@ qSDI <- function(
     tol=tol
   )
 
-  nulltest_X1 <-MZ.test.quantile(x=X_1, y=Y, alpha=alpha)
-  nulltest_X2 <-MZ.test.quantile(x=X_2, y=Y, alpha=alpha)
+  nulltest_X1 <-MZ.test.quantile(x=X_1, y=Y, alpha=alpha, cov="hac")
+  nulltest_X2 <-MZ.test.quantile(x=X_2, y=Y, alpha=alpha, cov="hac")
 
 
   mcbIUUI <- pmax(

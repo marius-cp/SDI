@@ -4,7 +4,14 @@
 \alias{MZ.test.quantile}
 \title{Mincer–Zarnowitz Quantile Regression Test}
 \usage{
-MZ.test.quantile(x, y, alpha)
+MZ.test.quantile(
+  x,
+  y,
+  alpha,
+  cov = c("default", "hac"),
+  ker = 3L,
+  bandwidth = NULL
+)
 }
 \arguments{
 \item{x}{Forecast values.}
@@ -12,14 +19,27 @@ MZ.test.quantile(x, y, alpha)
 \item{y}{Realized outcomes.}
 
 \item{alpha}{Quantile level for the regression (e.g., 0.25).}
+
+\item{cov}{Character. Covariance estimator used for inference:
+\code{"default"} uses \code{summary.rq(se = "nid")} (no serial-correlation correction),
+\code{"hac"} uses a HAC covariance estimator for quantile regression (Galvao & Yoon, 2024).}
+
+\item{ker}{Integer. Kernel choice for the HAC estimator when \code{cov = "hac"}.
+In the bundled HAC routines: \code{1} = truncated, \code{2} = Bartlett, \code{3} = Quadratic Spectral (QS).}
+
+\item{bandwidth}{Optional integer. Bandwidth (truncation lag) used for the HAC estimator when
+\code{cov = "hac"}. If \code{NULL}, the bandwidth is selected automatically via \code{band()}.}
 }
 \value{
 A \code{list} with:
 \itemize{
-  \item \code{estimate} – summary of the quantile regression fit.
+  \item \code{estimate} – summary of the quantile regression fit (from \code{summary.rq}).
+  \item \code{cov.type} – covariance type used (\code{"default"} or \code{"hac"}).
+  \item \code{bandwidth.used} – bandwidth used for HAC (otherwise \code{NA}).
+  \item \code{ker} – kernel used for HAC (returned for convenience).
   \item \code{WaldStat.MCB}, \code{Wald.pval.MCB} – test for \eqn{(\beta_0, \beta_1) = (0, 1)}.
   \item \code{WaldStat.DSC}, \code{Wald.pval.DSC} – test for \eqn{\beta_1 = 0}.
-  \item \code{fittedvalues} – tibble with \code{x} and fitted \code{quantile regression} values.
+  \item \code{fittedvalues} – tibble with \code{x} and fitted quantile regression values.
 }
 }
 \description{
@@ -30,17 +50,27 @@ Computes Wald statistics to test for zero MCB and/or zero DSC components:
   \item Null hypothesis \strong{DSC = 0:} test \eqn{\beta_1 = 0} for discrimination skill.
 }
 The test for \strong{MCB = 0} is VQR backtest by Gaglianone et al (2011).
+The covariance matrix used in the Wald tests can be either the default quantile-regression
+covariance from \code{\link[quantreg]{summary.rq}} (via \code{se = "nid"}) or a HAC estimator
+for time-series quantile regression following Galvao & Yoon (2024).
 }
 \examples{
 set.seed(123)
 y <- rnorm(100)
 x <- y + rnorm(100)
+
+# Default inference (quantreg "nid")
 MZ.test.quantile(x, y, alpha = 0.5)
+
+# HAC inference (requires HAC routines in the package namespace)
+# MZ.test.quantile(x, y, alpha = 0.5, cov = "hac", ker = 3L)
 
 }
 \references{
 Gaglianone, W. P., Lima, L. R., Linton, O., & Smith, D. R. (2011). Evaluating Value-at-Risk models via quantile regression. \emph{Journal of Business and Economic Statistics}, 29(1), 150–160.
 \doi{10.1198/jbes.2010.08288}
+ Galvao, A. F., & Yoon, J. (2024).HAC Covariance Matrix Estimation in Quantile Regression. \emph{Journal of the American Statistical Association}, 119(547), 2305–2316.
+\doi{10.1080/01621459.2023.2257365}
 }
 \seealso{
 \code{\link[quantreg]{rq}} for quantile regression estimation.

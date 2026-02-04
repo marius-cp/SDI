@@ -6,9 +6,9 @@ Author: c(
     person(given = "Marius",
            family = "Puke",
            role = c("aut", "cre"),
-           email = "marius.puke@uni-hohenheim.de")
+           email = "marius.c.puke@gmail.com")
            )
-Maintainer: Marius Puke <marius.puke@uni-hohenheim.de>
+Maintainer: Marius Puke <marius.c.puke@gmail.com>
 Description: Package to perfroms inference for the Murphy Decompostion of a forecaster's average score/loss. 
 License: GPL-3
 Encoding: UTF-8
@@ -25,5 +25,6 @@ Imports:
     MASS, 
     lmtest, 
     car, 
-    quantreg
+    quantreg,
+    mvtnorm
     

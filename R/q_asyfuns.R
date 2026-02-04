@@ -13,72 +13,132 @@ NULL
 #'   \item Null hypothesis \strong{DSC = 0:} test \eqn{\beta_1 = 0} for discrimination skill.
 #' }
 #' The test for \strong{MCB = 0} is VQR backtest by Gaglianone et al (2011).
+#' The covariance matrix used in the Wald tests can be either the default quantile-regression
+#' covariance from \code{\link[quantreg]{summary.rq}} (via \code{se = "nid"}) or a HAC estimator
+#' for time-series quantile regression following Galvao & Yoon (2024).
+#'
 #'
 #' @param x Forecast values.
 #' @param y Realized outcomes.
 #' @param alpha Quantile level for the regression (e.g., 0.25).
+#' @param cov Character. Covariance estimator used for inference:
+#'   \code{"default"} uses \code{summary.rq(se = "nid")} (no serial-correlation correction),
+#'   \code{"hac"} uses a HAC covariance estimator for quantile regression (Galvao & Yoon, 2024).
+#' @param ker Integer. Kernel choice for the HAC estimator when \code{cov = "hac"}.
+#'   In the bundled HAC routines: \code{1} = truncated, \code{2} = Bartlett, \code{3} = Quadratic Spectral (QS).
+#' @param bandwidth Optional integer. Bandwidth (truncation lag) used for the HAC estimator when
+#'   \code{cov = "hac"}. If \code{NULL}, the bandwidth is selected automatically via \code{band()}.
 #'
 #' @return
 #' A \code{list} with:
 #' \itemize{
-#'   \item \code{estimate} – summary of the quantile regression fit.
+#'   \item \code{estimate} – summary of the quantile regression fit (from \code{summary.rq}).
+#'   \item \code{cov.type} – covariance type used (\code{"default"} or \code{"hac"}).
+#'   \item \code{bandwidth.used} – bandwidth used for HAC (otherwise \code{NA}).
+#'   \item \code{ker} – kernel used for HAC (returned for convenience).
 #'   \item \code{WaldStat.MCB}, \code{Wald.pval.MCB} – test for \eqn{(\beta_0, \beta_1) = (0, 1)}.
 #'   \item \code{WaldStat.DSC}, \code{Wald.pval.DSC} – test for \eqn{\beta_1 = 0}.
-#'   \item \code{fittedvalues} – tibble with \code{x} and fitted \code{quantile regression} values.
+#'   \item \code{fittedvalues} – tibble with \code{x} and fitted quantile regression values.
 #' }
 #'
 #' @examples
 #' set.seed(123)
 #' y <- rnorm(100)
 #' x <- y + rnorm(100)
+#'
+#' # Default inference (quantreg "nid")
 #' MZ.test.quantile(x, y, alpha = 0.5)
+#'
+#' # HAC inference (requires HAC routines in the package namespace)
+#' # MZ.test.quantile(x, y, alpha = 0.5, cov = "hac", ker = 3L)
 #'
 #' @seealso \code{\link[quantreg]{rq}} for quantile regression estimation.
 #'
 #' @references
 #' Gaglianone, W. P., Lima, L. R., Linton, O., & Smith, D. R. (2011). Evaluating Value-at-Risk models via quantile regression. \emph{Journal of Business and Economic Statistics}, 29(1), 150–160.
 #' \doi{10.1198/jbes.2010.08288}
+#'  Galvao, A. F., & Yoon, J. (2024).HAC Covariance Matrix Estimation in Quantile Regression. \emph{Journal of the American Statistical Association}, 119(547), 2305–2316.
+#' \doi{10.1080/01621459.2023.2257365}
 #'
 #' @export
-MZ.test.quantile <- function(x, y, alpha){
+MZ.test.quantile <- function(x, y, alpha,
+                                 cov = c("default", "hac"),
+                                 ker = 3L,
+                                 bandwidth = NULL){
+
+  qr_cov <- match.arg(cov)
+  dat <- data.frame(y = y, x = x)
 
   # Quantile regression
-  MZ.QR.fit <- quantreg::rq(y ~ x, tau = alpha)
-  Summary.MZ.QR.fit <- summary(MZ.QR.fit, covariance = TRUE, se = "nid")
+  fit <- quantreg::rq(y ~ x, tau = alpha, data = dat)
+  beta_hat <- coef(fit)
+
+  # Default covariance (quantreg "nid")
+  bb <- summary(fit, covariance = TRUE, se = "nid")
+  cov.c <- bb$cov
+
+  cov.r <- NULL
+  bw_used <- NA_integer_
+
+  if(qr_cov == "hac"){
+    uhat <- fit$resid
+    xext <- stats::model.matrix(~ x, data = dat)
+    p    <- ncol(xext)
+    nt   <- nrow(xext)
+
+    h  <- (alpha - as.numeric(uhat < 0))
+    H2 <- (h %o% rep(1, p)) * xext
+
+    bw_used <- bandwidth
+    if(is.null(bw_used)){
+      bw_used <- band(H2, nt = nt, ng = 1, dy = p, ker = ker)$band
+    }
+
+    bb2 <- hac.se(
+      x    = xext,
+      e0   = (alpha * (1 - alpha) * bb$J),
+      e1   = bb$Hinv,
+      uhat = uhat,
+      tau  = alpha,
+      nt   = nt,
+      mt   = bw_used,
+      ker  = ker
+    )
+
+    cov.r <- bb2$cov
+  }
 
 
-  beta_hat <- coef(MZ.QR.fit)
-  V_beta   <- Summary.MZ.QR.fit$cov
+  V_beta <- if(qr_cov == "hac") cov.r else cov.c
 
-  ## --- Test for MCB = 0: H0: (beta0, beta1) = (0, 1) ---
-  R_MCB <- diag(2)              # selects (beta0, beta1)
+  ## --- MCB = 0: (beta0, beta1) = (0, 1) ---
+  R_MCB <- diag(2)
   r_MCB <- c(0, 1)
-  diff_MCB <- R_MCB %*% beta_hat - r_MCB
+  diff_MCB <- as.matrix(R_MCB %*% beta_hat - r_MCB)
 
-  Wald_MCB <- as.numeric(t(diff_MCB) %*% solve(R_MCB %*% V_beta %*% R_MCB) %*% diff_MCB)
+  Wald_MCB <- as.numeric(t(diff_MCB) %*% solve(R_MCB %*% V_beta %*% t(R_MCB)) %*% diff_MCB)
   pval_MCB <- 1 - pchisq(Wald_MCB, df = 2)
 
-
-  ## --- Test for DSC = 0: H0: beta1 = 0 ---
-  R_DSC <- c(0, 1)              # selects slope only
+  ## --- DSC = 0: beta1 = 0 ---
+  R_DSC <- matrix(c(0, 1), nrow = 1)  # 1x2
   r_DSC <- 0
-  diff_DSC <- R_DSC %*% beta_hat - r_DSC
+  diff_DSC <- as.matrix(R_DSC %*% beta_hat - r_DSC)
 
-  Wald_DSC <- as.numeric(t(diff_DSC) %*% solve(R_DSC %*% V_beta %*% R_DSC) %*% diff_DSC)
+  Wald_DSC <- as.numeric(t(diff_DSC) %*% solve(R_DSC %*% V_beta %*% t(R_DSC)) %*% diff_DSC)
   pval_DSC <- 1 - pchisq(Wald_DSC, df = 1)
 
-  return(
-    list(
-      estimate        = Summary.MZ.QR.fit,
-      WaldStat.MCB    = Wald_MCB,
-      Wald.pval.MCB   = pval_MCB,
-      WaldStat.DSC    = Wald_DSC,
-      Wald.pval.DSC   = pval_DSC,
-      fittedvalues    = tibble("x" = x, "fit" = MZ.QR.fit$fitted.values)
-    )
+  list(
+    estimate        = bb,
+    cov.type        = qr_cov,
+    bandwidth.used  = bw_used,
+    ker             = ker,
+    WaldStat.MCB    = Wald_MCB,
+    Wald.pval.MCB   = pval_MCB,
+    WaldStat.DSC    = Wald_DSC,
+    Wald.pval.DSC   = pval_DSC,
+    fittedvalues    = tibble::tibble(x = x, fit = fit$fitted.values)
   )
 }
-
 
 #' Decomposition of Quantile Scores
 #'
